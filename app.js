@@ -4,6 +4,12 @@ const bodyParser = require('body-parser')
 const morgan = require('morgan')
 const puppeteer = require('puppeteer')
 const base64Img = require('base64-img');
+const cheerio = require('cheerio')
+const request = require('request')
+
+
+const proxyGenerator = require('./proxyGenerator');
+const { html } = require('cheerio');
 
 
 
@@ -37,74 +43,72 @@ app.post('/api/v1/getphoto', (req, res) => {
     let query = `${name.replace(/\s/g, "+")}`;
 
 
-    // init async scrape function
-    let scrape = async() => {
-        try {
-
-
-            // launch puppeteer and prevent sandbox error
-            const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disabled-setuid-sandbox'] })
-
-            //open page
-            const page = await browser.newPage()
-
-            await page.goto(`https://www.google.com/search?q=${query}&tbm=isch`)
-
-            await page.waitFor(1000)
-
-            // get result
-            const result = await page.evaluate(() => {
-
-                // get image
-                const base64image = document.querySelectorAll('.rg_i')[0].getAttribute('src')
-
-                // return base64 image
-                return {
-                    base64image
-
-                }
+    // invoke Proxy generator
+    proxyGenerator((error, genProxy) => {
+        // if error
+        if (error) {
+            console.log(error)
+            return res.status(404).json({
+                success: false,
+                error: error
             })
-
-            // close browser
-            browser.close()
-            return result
-
-        } catch (error) {
-            console.log(error)
         }
-    }
 
 
-    scrape().then(async(value) => {
 
-            // decode base64 image
-            base64Img.img(value.base64image, 'Images', `image-${Date.now()}`, function(err, filepath) {
+        // // manual proxy
+        // let manualProxy = [
+        //     "http://34.94.11.201:3128", "http://212.87.220.2:3128"
+        // ]
 
-                // check if error
-                if (err) {
-                    console.log(err)
-                }
 
-                // if no error
-                return res.json({
-                    imagePath: filepath,
-                    address: address
+        // init options
+        const options = {
+            url: `https://www.google.com/search?q=${query}&tbm=isch`,
+            method: "GET",
+            proxy: genProxy
+        }
+
+        console.log(genProxy)
+
+
+        // init request
+        request(options, (error, response, html) => {
+            if (error) {
+                return res.status(404).json({
+                    success: false,
+                    error: error.message
                 })
+            }
 
-            });
+            // if no error
+            //load cheerio
+            const $ = cheerio.load(html)
 
+            // get imageSrc
+            const imageSrc = $('.RAyV4b img').attr('src')
 
+            if (imageSrc) {
+                return res.json({
+                    success: true,
+                    imageUrl: imageSrc
+                })
+            } else {
+                return res.json({
+                    success: false,
+                    imageUrl: "Image Not Found"
+                })
+            }
         })
-        .catch((error) => {
-            console.log(error)
-        })
-
-
-
+    })
 
 
 
 })
+
+
+
+
 
 
 // listen to port
