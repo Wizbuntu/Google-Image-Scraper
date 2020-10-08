@@ -5,11 +5,14 @@ const morgan = require('morgan')
 const puppeteer = require('puppeteer')
 const base64Img = require('base64-img');
 const cheerio = require('cheerio')
+const cheerioHttp = require('cheerio-httpcli')
 const request = require('request')
+let Html5Entities = require('html-entities').Html5Entities
+let htmlEntities = new Html5Entities()
 
 
 const proxyGenerator = require('./proxyGenerator');
-const { html } = require('cheerio');
+const { json } = require('body-parser');
 
 
 
@@ -40,7 +43,7 @@ app.post('/api/v1/getphoto', (req, res) => {
     }
 
     // regex replace white space
-    let query = `${name.replace(/\s/g, "+")}`;
+    let query = `${name.replace(/\s/g, "-")}`;
 
 
     // invoke Proxy generator
@@ -55,21 +58,18 @@ app.post('/api/v1/getphoto', (req, res) => {
         }
 
 
-
-        // // manual proxy
-        // let manualProxy = [
-        //     "http://34.94.11.201:3128", "http://212.87.220.2:3128"
-        // ]
+        // if no error
+        console.log(genProxy)
 
 
         // init options
         const options = {
-            url: `https://www.google.com/search?q=${query}&tbm=isch`,
+            url: `https://www.gettyimages.com/photos/${query}?family=creative`,
             method: "GET",
-            proxy: genProxy
+            // proxy: genProxy
         }
 
-        console.log(genProxy)
+
 
 
         // init request
@@ -85,14 +85,17 @@ app.post('/api/v1/getphoto', (req, res) => {
             //load cheerio
             const $ = cheerio.load(html)
 
-            // get imageSrc
-            const imageSrc = $('.RAyV4b img').attr('src')
+
+            const imageSrc = $('.gallery-asset__thumb').attr('src')
+
+            // console.log(imageSrc)
 
             if (imageSrc) {
+                //    return response
                 return res.json({
-                    success: true,
-                    imageUrl: imageSrc
+                    image: imageSrc
                 })
+
             } else {
                 return res.json({
                     success: false,
@@ -105,6 +108,7 @@ app.post('/api/v1/getphoto', (req, res) => {
 
 
 })
+
 
 
 
