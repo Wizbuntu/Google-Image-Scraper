@@ -2,17 +2,10 @@
 const express = require('express')
 const bodyParser = require('body-parser')
 const morgan = require('morgan')
-const puppeteer = require('puppeteer')
-const base64Img = require('base64-img');
 const cheerio = require('cheerio')
-const cheerioHttp = require('cheerio-httpcli')
 const request = require('request')
-let Html5Entities = require('html-entities').Html5Entities
-let htmlEntities = new Html5Entities()
-
 
 const proxyGenerator = require('./proxyGenerator');
-const { json } = require('body-parser');
 
 
 
